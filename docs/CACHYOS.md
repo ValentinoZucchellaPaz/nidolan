@@ -31,7 +31,7 @@ install -d -m 700 .selfdrive/data .selfdrive/state
 openssl rand -hex 32
 ```
 
-Editá `.env`: cambiá `ADMIN_PASSWORD` y pegá la clave generada en `SESSION_SECRET`. Para tu usuario actual, `PUID=1000` y `PGID=1000` son correctos; verificá ambos con `id -u` e `id -g` si usás otra cuenta.
+Editá `.env`: cambiá `ADMIN_PASSWORD`, pegá la clave generada en `SESSION_SECRET` y configurá `LIBRARY_PATH` con una carpeta existente de tu PC, por ejemplo `/home/TU_USUARIO/Documentos/UNC`. Esa biblioteca se monta en modo solo lectura: Mi Drive puede navegarla y descargarla, pero no duplicará ni modificará tus archivos. Para tu usuario actual, `PUID=1000` y `PGID=1000` son correctos; verificá ambos con `id -u` e `id -g` si usás otra cuenta.
 
 Después iniciá la aplicación:
 
