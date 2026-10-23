@@ -23,10 +23,11 @@ Si ya tenés `docker` y `docker-compose` instalados, ejecutá solo los comandos 
 
 ## 2. Iniciar una prueba local
 
-Desde la raíz del proyecto:
+Desde la raíz del proyecto, creá antes los directorios para que pertenezcan a tu usuario (Docker no debe crearlos como `root`):
 
 ```bash
 cp .env.cachyos.example .env
+install -d -m 700 .selfdrive/data .selfdrive/state
 openssl rand -hex 32
 ```
 
