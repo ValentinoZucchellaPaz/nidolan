@@ -5,6 +5,7 @@
 sources.json
 compose.override.yaml
 PROJECT_CONTEXT.md
+AGENTS.md
 __pycache__/
 .pytest_cache/
 *.pyc

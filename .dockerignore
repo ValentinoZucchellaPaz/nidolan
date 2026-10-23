@@ -1,6 +1,8 @@
 .git
 .env
 .env.*
+AGENTS.md
+PROJECT_CONTEXT.md
 .selfdrive
 .selfdrive-data
 .selfdrive-state
