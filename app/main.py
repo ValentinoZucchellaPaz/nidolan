@@ -109,6 +109,17 @@ def setup_storage(settings: Settings) -> None:
             )
 
 
+def reset_admin_password(settings: Settings) -> None:
+    """Replace the only local account without touching stored files or metadata."""
+    setup_storage(settings)
+    with database_connection(settings) as db:
+        db.execute("DELETE FROM users")
+        db.execute(
+            "INSERT INTO users (username, password_hash) VALUES (?, ?)",
+            (settings.username, hash_password(settings.password)),
+        )
+
+
 def is_authenticated(request: Request) -> bool:
     return request.session.get("username") is not None
 
@@ -129,7 +140,20 @@ def format_size(size: int) -> str:
     return f"{size} B"
 
 
-def page(title: str, body: str) -> HTMLResponse:
+def file_kind(name: str) -> str:
+    extension = Path(name).suffix.lower()
+    if extension in {".mp4", ".mkv", ".mov", ".avi", ".webm"}:
+        return "VID"
+    if extension in {".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic"}:
+        return "IMG"
+    if extension in {".zip", ".rar", ".7z", ".tar", ".gz"}:
+        return "ZIP"
+    if extension in {".pdf", ".txt", ".md", ".doc", ".docx"}:
+        return "DOC"
+    return "FILE"
+
+
+def page(title: str, body: str, scripts: str = "") -> HTMLResponse:
     document = f"""<!doctype html>
 <html lang="es">
 <head>
@@ -137,20 +161,20 @@ def page(title: str, body: str) -> HTMLResponse:
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{html.escape(title)} · Mi Drive</title>
   <style>
-    :root {{ color-scheme: light; font-family: system-ui, sans-serif; color: #172033; background: #f4f7fb; }}
-    body {{ margin: 0; }} main {{ width: min(920px, calc(100% - 2rem)); margin: 3rem auto; }}
-    .card {{ background: white; border-radius: 12px; box-shadow: 0 2px 12px #17203318; padding: clamp(1.25rem, 4vw, 2rem); }}
-    header {{ display: flex; gap: 1rem; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }}
-    h1 {{ margin: 0; font-size: clamp(1.5rem, 4vw, 2rem); }}
-    form {{ display: flex; gap: .75rem; flex-wrap: wrap; align-items: center; }}
-    input {{ font: inherit; padding: .65rem; border: 1px solid #b8c3d8; border-radius: 7px; }}
-    button, .button {{ background: #1769e0; border: 0; border-radius: 7px; color: white; cursor: pointer; font: inherit; padding: .65rem 1rem; text-decoration: none; }}
-    button.secondary {{ background: #e7edf8; color: #172033; }}
-    table {{ border-collapse: collapse; width: 100%; margin-top: 1.5rem; }} th, td {{ border-bottom: 1px solid #e5eaf2; padding: .8rem .4rem; text-align: left; }}
-    td:last-child, th:last-child {{ text-align: right; }} .muted {{ color: #5f6d84; }} .error {{ background: #fff0f0; color: #9b1c1c; border-radius: 7px; padding: .75rem; }}
-    @media (max-width: 540px) {{ table th:nth-child(3), table td:nth-child(3) {{ display: none; }} }}
+    :root {{ color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #edf4ff; background: #0b1224; }}
+    * {{ box-sizing: border-box; }} body {{ min-height: 100vh; margin: 0; background: radial-gradient(circle at 8% 0%, #20396d 0, transparent 32rem), #0b1224; }}
+    body::before {{ content: ""; position: fixed; inset: 0; pointer-events: none; opacity: .22; background-image: linear-gradient(#8fbaff12 1px, transparent 1px), linear-gradient(90deg, #8fbaff12 1px, transparent 1px); background-size: 32px 32px; mask-image: linear-gradient(to bottom, black, transparent 75%); }}
+    main {{ position: relative; width: min(1100px, calc(100% - 2rem)); margin: clamp(1rem, 4vw, 3.5rem) auto; }} h1, h2, p {{ margin-top: 0; }} h1 {{ font-size: clamp(2rem, 5vw, 3.5rem); letter-spacing: -.055em; line-height: .96; }} h2 {{ font-size: 1rem; margin-bottom: .5rem; }}
+    button, .button {{ appearance: none; border: 0; border-radius: .7rem; color: #091224; cursor: pointer; font: inherit; font-weight: 720; padding: .72rem 1rem; text-decoration: none; transition: transform .16s ease, background .16s ease; }} button:hover, .button:hover {{ transform: translateY(-1px); }} button:focus-visible, .button:focus-visible, input:focus-visible {{ outline: 3px solid #8fd5ff; outline-offset: 3px; }} .button, .primary {{ background: #a7e6ff; }} .quiet {{ background: #1d2c4d; color: #d9e6fb; }}
+    .shell {{ background: #101a30e8; border: 1px solid #3b5280; box-shadow: 0 2rem 5rem #02071480; }} .topbar {{ align-items: center; border-radius: 1rem 1rem 0 0; display: flex; justify-content: space-between; padding: 1rem 1.25rem; }} .brand {{ align-items: center; display: flex; font-weight: 760; gap: .75rem; letter-spacing: -.025em; }} .brand-mark {{ align-items: center; background: #b9f3d4; border-radius: .55rem; color: #0e2330; display: grid; font-size: 1.2rem; height: 2rem; place-items: center; width: 2rem; }} .account {{ align-items: center; color: #b8c8e4; display: flex; gap: .65rem; }} .avatar {{ align-items: center; background: #355393; border: 1px solid #789be0; border-radius: 50%; color: white; display: grid; font-size: .8rem; font-weight: 800; height: 2rem; place-items: center; width: 2rem; }}
+    .dashboard {{ border-radius: 0 0 1rem 1rem; padding: clamp(1.25rem, 4vw, 3rem); }} .hero {{ align-items: end; display: flex; gap: 1.5rem; justify-content: space-between; margin: 1.5rem 0 2.5rem; }} .hero p {{ color: #b8c8e4; font-size: 1.05rem; margin-bottom: 0; max-width: 34rem; }} .online {{ align-items: center; background: #153b3b; border: 1px solid #32756d; border-radius: 999px; color: #b9f3d4; display: inline-flex; font-size: .84rem; font-weight: 700; gap: .5rem; padding: .5rem .75rem; white-space: nowrap; }} .pulse {{ background: #9df7c9; border-radius: 50%; box-shadow: 0 0 0 .35rem #9df7c925; height: .5rem; width: .5rem; }}
+    .metrics {{ display: grid; gap: .75rem; grid-template-columns: repeat(3, 1fr); margin-bottom: 1.5rem; }} .metric {{ background: #14213c; border: 1px solid #2d416a; border-radius: .8rem; padding: 1rem; }} .metric span {{ color: #9bb0d4; display: block; font-size: .82rem; margin-bottom: .3rem; }} .metric strong {{ font-size: 1.25rem; letter-spacing: -.03em; }}
+    .upload-dock {{ align-items: center; background: linear-gradient(120deg, #1c335c, #142343); border: 1px dashed #8fbaff; border-radius: .9rem; display: grid; gap: 1rem; grid-template-columns: 1fr auto; margin: 1.5rem 0 2.5rem; padding: 1rem; transition: background .16s ease, border-color .16s ease; }} .upload-dock.dragging {{ background: #264a7c; border-color: #b9f3d4; }} .upload-copy {{ min-width: 0; }} .upload-copy p {{ color: #b8c8e4; margin: .25rem 0 0; }} .upload-dock form {{ align-items: center; display: flex; flex-wrap: wrap; gap: .75rem; justify-content: flex-end; }} .file-input {{ height: 1px; overflow: hidden; position: absolute; width: 1px; }} .choose-file {{ background: #263d68; border: 1px solid #5578ae; color: #e6efff; }} .selected-file {{ color: #b9f3d4; font-size: .88rem; max-width: 15rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }} .progress {{ background: #0b1428; border-radius: 999px; display: none; height: .45rem; overflow: hidden; width: 100%; }} .progress span {{ background: #b9f3d4; display: block; height: 100%; width: 0; }}
+    .section-head {{ align-items: center; display: flex; gap: 1rem; justify-content: space-between; }} .section-head h2 {{ margin: 0; }} .search {{ background: #0d172d; border: 1px solid #31466f; border-radius: .65rem; color: #edf4ff; font: inherit; padding: .65rem .8rem; width: min(18rem, 55vw); }} .file-list {{ border-top: 1px solid #2d416a; margin-top: 1rem; }} .file-row {{ align-items: center; border-bottom: 1px solid #263959; display: grid; gap: .75rem; grid-template-columns: 3.2rem minmax(0, 1fr) 7rem 10rem auto; padding: .9rem .25rem; }} .file-type {{ background: #1e3156; border-radius: .55rem; color: #a7e6ff; font-size: .67rem; font-weight: 850; letter-spacing: .04em; padding: .55rem .25rem; text-align: center; }} .file-name {{ color: #f3f7ff; font-weight: 680; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }} .file-meta {{ color: #9bb0d4; font-size: .86rem; }} .download {{ background: transparent; border: 1px solid #46608f; color: #dce9ff; font-size: .88rem; padding: .5rem .7rem; }} .empty {{ border: 1px dashed #3e5683; border-radius: .8rem; color: #aebfdb; margin-top: 1rem; padding: 3rem 1rem; text-align: center; }} .empty b {{ color: #edf4ff; display: block; font-size: 1.1rem; margin-bottom: .4rem; }}
+    .login {{ margin: clamp(2rem, 10vh, 8rem) auto; max-width: 29rem; }} .login .shell {{ border-radius: 1rem; padding: clamp(1.5rem, 6vw, 3rem); }} .login h1 {{ margin: 1.5rem 0 .75rem; }} .login p {{ color: #b8c8e4; }} .field {{ display: grid; gap: .45rem; margin: 1.1rem 0; }} .field label {{ color: #c9d7ef; font-size: .9rem; font-weight: 650; }} .field input {{ background: #0b1428; border: 1px solid #3e5683; border-radius: .65rem; color: #f5f8ff; font: inherit; padding: .85rem; }} .login button {{ margin-top: .75rem; width: 100%; }} .error {{ background: #48263c; border: 1px solid #965171; border-radius: .65rem; color: #ffdbe8; padding: .8rem; }}
+    [hidden] {{ display: none !important; }} @media (max-width: 720px) {{ .hero {{ align-items: start; flex-direction: column; }} .metrics {{ grid-template-columns: 1fr; }} .upload-dock {{ grid-template-columns: 1fr; }} .upload-dock form {{ justify-content: start; }} .file-row {{ grid-template-columns: 3.2rem minmax(0, 1fr) auto; }} .file-meta.date {{ display: none; }} .account .account-name {{ display: none; }} }} @media (prefers-reduced-motion: reduce) {{ *, *::before, *::after {{ scroll-behavior: auto !important; transition-duration: 0.01ms !important; }} }}
   </style>
-</head><body><main>{body}</main></body></html>"""
+</head><body><main>{body}</main>{scripts}</body></html>"""
     return HTMLResponse(document)
 
 
@@ -175,13 +199,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         message = '<p class="error">Usuario o contraseña incorrectos.</p>' if error else ""
         return page(
             "Ingresar",
-            f"""<section class="card"><h1>Mi Drive</h1>{message}
-            <p class="muted">Acceso privado de la red local.</p>
+            f"""<section class="login"><div class="shell"><div class="brand"><span class="brand-mark">↗</span> Mi Drive</div>
+            <h1>Tu servidor,<br>en casa.</h1><p>Entrá a tus archivos desde cualquier dispositivo de tu red local.</p>{message}
             <form method="post" action="/login">
-              <input required autofocus name="username" autocomplete="username" placeholder="Usuario">
-              <input required name="password" type="password" autocomplete="current-password" placeholder="Contraseña">
-              <button type="submit">Ingresar</button>
-            </form></section>""",
+              <div class="field"><label for="username">Usuario</label><input id="username" required autofocus name="username" autocomplete="username" placeholder="Tu usuario"></div>
+              <div class="field"><label for="password">Contraseña</label><input id="password" required name="password" type="password" autocomplete="current-password" placeholder="Tu contraseña"></div>
+              <button class="primary" type="submit">Abrir Mi Drive</button>
+            </form></div></section>""",
         )
 
     @application.post("/login")
@@ -210,23 +234,53 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             files = db.execute(
                 "SELECT id, original_name, size_bytes, created_at FROM files ORDER BY created_at DESC"
             ).fetchall()
+        total_size = sum(item["size_bytes"] for item in files)
         rows = "".join(
-            "<tr><td>{}</td><td>{}</td><td>{}</td><td><a class=\"button\" href=\"/files/{}/download\">Descargar</a></td></tr>".format(
+            "<article class=\"file-row\" data-file-name=\"{}\"><span class=\"file-type\">{}</span><div><div class=\"file-name\" title=\"{}\">{}</div><div class=\"file-meta mobile-date\">{}</div></div><span class=\"file-meta\">{}</span><span class=\"file-meta date\">{}</span><a class=\"button download\" href=\"/files/{}/download\">Descargar</a></article>".format(
+                html.escape(item["original_name"].lower(), quote=True),
+                file_kind(item["original_name"]),
+                html.escape(item["original_name"], quote=True),
                 html.escape(item["original_name"]),
+                html.escape(item["created_at"]),
                 html.escape(format_size(item["size_bytes"])),
                 html.escape(item["created_at"]),
                 html.escape(item["id"]),
             )
             for item in files
-        ) or '<tr><td colspan="4" class="muted">Todavía no hay archivos.</td></tr>'
+        ) or '<div class="empty"><b>El estante está vacío.</b>Soltá un archivo arriba para guardarlo en tu servidor.</div>'
+        scripts = """<script>
+          (() => {
+            const form = document.querySelector('#upload-form');
+            const input = document.querySelector('#file-input');
+            const dock = document.querySelector('.upload-dock');
+            const name = document.querySelector('#selected-file');
+            const progress = document.querySelector('#upload-progress');
+            const bar = progress?.querySelector('span');
+            const search = document.querySelector('#file-search');
+            const choose = file => { if (!file) return; name.textContent = file.name; name.hidden = false; };
+            input?.addEventListener('change', () => choose(input.files[0]));
+            ['dragenter', 'dragover'].forEach(event => dock?.addEventListener(event, item => { item.preventDefault(); dock.classList.add('dragging'); }));
+            ['dragleave', 'drop'].forEach(event => dock?.addEventListener(event, item => { item.preventDefault(); dock.classList.remove('dragging'); }));
+            dock?.addEventListener('drop', event => { if (event.dataTransfer.files.length) { input.files = event.dataTransfer.files; choose(input.files[0]); } });
+            form?.addEventListener('submit', event => {
+              if (!input.files.length || !window.XMLHttpRequest) return;
+              event.preventDefault(); progress.style.display = 'block';
+              const button = form.querySelector('button'); button.disabled = true; button.textContent = 'Subiendo…';
+              const request = new XMLHttpRequest(); request.open('POST', '/files'); request.upload.onprogress = item => { if (item.lengthComputable) bar.style.width = `${Math.round(item.loaded / item.total * 100)}%`; };
+              request.onload = () => { if (request.status >= 200 && request.status < 400) location.reload(); else { button.disabled = false; button.textContent = 'Reintentar'; } };
+              request.onerror = () => { button.disabled = false; button.textContent = 'Reintentar'; }; request.send(new FormData(form));
+            });
+            search?.addEventListener('input', () => document.querySelectorAll('.file-row').forEach(row => { row.hidden = !row.dataset.fileName.includes(search.value.toLowerCase()); }));
+          })();
+        </script>"""
         return page(
             "Archivos",
-            f"""<section class="card"><header><div><h1>Mis archivos</h1><p class="muted">Solo disponible en tu red local.</p></div>
-            <form method="post" action="/logout"><button class="secondary">Salir</button></form></header>
-            <form method="post" action="/files" enctype="multipart/form-data">
-              <input required type="file" name="upload"><button type="submit">Subir archivo</button>
-            </form>
-            <table><thead><tr><th>Nombre</th><th>Tamaño</th><th>Subido</th><th></th></tr></thead><tbody>{rows}</tbody></table></section>""",
+            f"""<section class="shell topbar"><div class="brand"><span class="brand-mark">↗</span> Mi Drive</div><div class="account"><span class="account-name">{html.escape(request.session['username'])}</span><span class="avatar">{html.escape(request.session['username'][0].upper())}</span><form method="post" action="/logout"><button class="quiet" type="submit">Salir</button></form></div></section>
+            <section class="shell dashboard"><div class="hero"><div><h1>Todo lo tuyo,<br>en tu red.</h1><p>Un estante privado para archivos, películas y proyectos. Sin salir de casa.</p></div><span class="online"><i class="pulse"></i>Servidor activo</span></div>
+            <div class="metrics"><div class="metric"><span>Archivos guardados</span><strong>{len(files)}</strong></div><div class="metric"><span>Espacio ocupado</span><strong>{format_size(total_size)}</strong></div><div class="metric"><span>Acceso</span><strong>Solo LAN</strong></div></div>
+            <section class="upload-dock"><div class="upload-copy"><h2>Sumá algo al estante</h2><p>Arrastrá un archivo aquí o elegilo desde tu dispositivo.</p><span id="selected-file" class="selected-file" hidden></span></div><form id="upload-form" method="post" action="/files" enctype="multipart/form-data"><input id="file-input" class="file-input" required type="file" name="upload"><label class="button choose-file" for="file-input">Elegir archivo</label><button class="primary" type="submit">Subir</button></form><div id="upload-progress" class="progress" aria-label="Progreso de subida"><span></span></div></section>
+            <div class="section-head"><h2>Biblioteca</h2><input id="file-search" class="search" type="search" placeholder="Buscar un archivo" aria-label="Buscar un archivo"></div><div class="file-list">{rows}</div></section>""",
+            scripts,
         )
 
     @application.post("/files")
