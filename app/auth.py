@@ -25,7 +25,7 @@ User = Annotated[str, Depends(current_user)]
 def login_form(request: Request, error: str | None = None):
     if request.session.get("username"):
         return RedirectResponse("/", status_code=303)
-    return render(request, "login.html", error=bool(error))
+    return render(request, "login.html", title="Ingresar", error=bool(error))
 
 
 @router.post("/login")
