@@ -162,7 +162,7 @@ def page(title: str, body: str, scripts: str = "") -> HTMLResponse:
   <title>{html.escape(title)} · Mi Drive</title>
   <style>
     :root {{ color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #edf4ff; background: #0b1224; }}
-    * {{ box-sizing: border-box; }} body {{ min-height: 100vh; margin: 0; background: radial-gradient(circle at 8% 0%, #20396d 0, transparent 32rem), #0b1224; }}
+    * {{ box-sizing: border-box; }} body {{ min-height: 100vh; margin: 0; background: #0b1224; }}
     body::before {{ content: ""; position: fixed; inset: 0; pointer-events: none; opacity: .22; background-image: linear-gradient(#8fbaff12 1px, transparent 1px), linear-gradient(90deg, #8fbaff12 1px, transparent 1px); background-size: 32px 32px; mask-image: linear-gradient(to bottom, black, transparent 75%); }}
     main {{ position: relative; width: min(1100px, calc(100% - 2rem)); margin: clamp(1rem, 4vw, 3.5rem) auto; }} h1, h2, p {{ margin-top: 0; }} h1 {{ font-size: clamp(2rem, 5vw, 3.5rem); letter-spacing: -.055em; line-height: .96; }} h2 {{ font-size: 1rem; margin-bottom: .5rem; }}
     button, .button {{ appearance: none; border: 0; border-radius: .7rem; color: #091224; cursor: pointer; font: inherit; font-weight: 720; padding: .72rem 1rem; text-decoration: none; transition: transform .16s ease, background .16s ease; }} button:hover, .button:hover {{ transform: translateY(-1px); }} button:focus-visible, .button:focus-visible, input:focus-visible {{ outline: 3px solid #8fd5ff; outline-offset: 3px; }} .button, .primary {{ background: #a7e6ff; }} .quiet {{ background: #1d2c4d; color: #d9e6fb; }}
