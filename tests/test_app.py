@@ -2,7 +2,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from app.main import Settings, create_app
+from app.main import Settings, create_app, reset_admin_password
 
 
 def make_client(tmp_path: Path) -> TestClient:
@@ -41,6 +41,27 @@ def test_login_rejects_bad_password_and_allows_valid_one(tmp_path: Path) -> None
     assert client.get("/").status_code == 200
     client.post("/logout")
     assert client.get("/", follow_redirects=False).headers["location"] == "/login"
+
+
+def test_reset_password_uses_the_current_environment_password(tmp_path: Path) -> None:
+    make_client(tmp_path)
+    replacement = Settings(
+        username="nuevo-admin",
+        password="new correct horse battery staple",
+        session_secret="b" * 32,
+        data_dir=tmp_path / "data",
+        state_dir=tmp_path / "state",
+    )
+    reset_admin_password(replacement)
+    changed = TestClient(create_app(replacement))
+    rejected = changed.post(
+        "/login", data={"username": "admin", "password": "correct horse battery staple"}, follow_redirects=False
+    )
+    assert rejected.headers["location"] == "/login?error=1"
+    accepted = changed.post(
+        "/login", data={"username": "nuevo-admin", "password": replacement.password}, follow_redirects=False
+    )
+    assert accepted.status_code == 303
 
 
 def test_upload_lists_and_downloads_a_utf8_filename(tmp_path: Path) -> None:

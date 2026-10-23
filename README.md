@@ -54,6 +54,17 @@ docker compose start
 
 Restaurar una copia requiere detener el servicio y reemplazar **ambos** directorios, porque SQLite y los archivos se corresponden entre sí.
 
+## Cambiar la contraseña
+
+Después de editar `ADMIN_PASSWORD` (o `ADMIN_USERNAME`) en `.env`, reconstruí el servicio y ejecutá una vez el comando de restablecimiento:
+
+```bash
+docker compose up -d --build
+docker compose exec selfdrive python -m app.admin reset-password
+```
+
+Esto conserva todos los archivos y sus metadatos; reemplaza la única cuenta administradora con las credenciales actuales de `.env`.
+
 ## Desarrollo y pruebas
 
 En un entorno Python con las dependencias de desarrollo instaladas:
