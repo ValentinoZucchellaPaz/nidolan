@@ -1,0 +1,22 @@
+{% macro icon(kind) %}
+<svg class="file-icon {{ kind }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{% if kind == 'folder' %}<path d="M2.5 7a2 2 0 0 1 2-2H10l2 2h7.5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-15a2 2 0 0 1-2-2z"/>
+{% elif kind == 'image' %}<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8" r="1.5"/><path d="m4 18 5-5 3 3 3-4 5 6"/>
+{% elif kind == 'video' %}<rect x="3" y="4" width="18" height="16" rx="2"/><path d="m10 8 6 4-6 4z"/>
+{% elif kind == 'pdf' %}<path d="M6 2h8l5 5v15H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M14 2v5h5M8 16h8"/>
+{% else %}<path d="M6 2h8l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M14 2v5h5"/>{% endif %}
+</svg>
+{% endmacro %}
+
+{% macro row(entry, managed=false) %}
+<article class="file-row" data-name="{{ entry.name|lower }}">
+  <a class="row-link" href="{{ entry.url }}" aria-label="{{ 'Abrir carpeta' if entry.kind == 'folder' else 'Descargar archivo' }} {{ entry.name }}">
+    <span class="entry-icon">{{ icon(entry.icon) }}</span>
+    <span class="entry-name" title="{{ entry.name }}">{{ entry.name }}</span>
+    <span class="entry-size">{{ entry.size }}</span>
+    <time class="entry-date">{{ entry.date }}</time>
+    <span class="row-chevron" aria-hidden="true">›</span>
+  </a>
+  {% if managed %}<button type="button" class="row-menu" data-node-id="{{ entry.id }}" data-node-name="{{ entry.name }}" aria-label="Opciones de {{ entry.name }}">···</button>{% endif %}
+</article>
+{% endmacro %}

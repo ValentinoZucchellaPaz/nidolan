@@ -1,0 +1,20 @@
+{% extends "shell.html" %}
+{% from "rows.html" import row %}
+{% block content %}
+<nav class="breadcrumbs" aria-label="Ruta"><a href="{{ parent_url }}" class="back-link">← Volver</a>{% for crumb in crumbs %}<span aria-hidden="true">/</span><a href="{{ crumb.url }}" {% if loop.last %}aria-current="page"{% endif %}>{{ crumb.name }}</a>{% endfor %}</nav>
+<div class="page-heading browser-heading"><div><p class="eyebrow">{{ 'Mi Drive' if managed else 'Ubicación vinculada' }}</p><h1>{{ title }}</h1><p>{{ 'Organizá tus archivos y carpetas.' if managed else 'Contenido de tu PC · solo lectura' }}</p></div>
+{% if managed %}<div class="heading-actions"><button class="button subtle" type="button" data-open-dialog="folder-dialog">+ Carpeta</button><button class="button primary" type="button" data-open-dialog="upload-dialog">↑ Subir</button></div>{% endif %}</div>
+{% if offline %}<section class="empty warning" role="status"><strong>Esta ubicación no está disponible</strong><p>Revisá que la carpeta exista y esté montada en Docker. Las otras ubicaciones siguen funcionando.</p></section>
+{% else %}
+<div class="list-tools"><label class="search-label"><span class="sr-only">Buscar en esta carpeta</span><input id="folder-search" type="search" placeholder="Buscar en esta carpeta" autocomplete="off"></label><form method="get" action="{{ current_url }}"><label class="sort-label">Ordenar <select name="sort" onchange="this.form.submit()"><option value="name" {% if sort != 'date' %}selected{% endif %}>Nombre</option><option value="date" {% if sort == 'date' %}selected{% endif %}>Más reciente</option></select></label></form></div>
+<div class="column-labels"><span>Nombre</span><span>Tamaño</span><span>Fecha</span></div>
+<div class="file-list" id="file-list">{% for entry in entries %}{{ row(entry, managed) }}{% endfor %}</div>
+{% if not entries %}<p class="empty">{{ 'Esta carpeta está vacía. Subí un archivo o creá una carpeta.' if managed else 'Esta carpeta está vacía.' }}</p>{% endif %}
+<p id="search-empty" class="empty" hidden>No hay elementos con ese nombre en esta carpeta.</p>
+{% endif %}
+{% if managed %}
+<dialog id="folder-dialog"><form method="post" action="/folders"><h2>Nueva carpeta</h2><p>Se creará dentro de {{ title }}.</p><input type="hidden" name="parent" value="{{ folder_id }}"><label>Nombre<input name="name" required maxlength="255" autofocus></label><div class="dialog-actions"><button type="button" class="button subtle" data-close-dialog>Cancelar</button><button type="submit" class="button primary">Crear carpeta</button></div></form></dialog>
+<dialog id="upload-dialog"><form method="post" action="/files" enctype="multipart/form-data" id="upload-form"><h2>Subir archivo</h2><p>Se guardará en {{ title }}.</p><input type="hidden" name="parent" value="{{ folder_id }}"><label>Archivo<input type="file" name="upload" required></label><div class="upload-progress" hidden><span></span></div><p class="upload-status" role="status"></p><div class="dialog-actions"><button type="button" class="button subtle" data-close-dialog>Cancelar</button><button type="submit" class="button primary">Subir</button></div></form></dialog>
+<dialog id="node-dialog"><h2>Organizar elemento</h2><p id="selected-node-name"></p><form id="rename-form" method="post"><label>Nuevo nombre<input id="rename-name" name="name" required maxlength="255"></label><div class="dialog-actions"><button type="submit" class="button primary">Renombrar</button></div></form><form id="move-form" method="post"><label>Mover a<select name="destination"><option value="">Raíz de Mi Drive</option>{% for folder in folders %}<option value="{{ folder.id }}">{{ folder.label }}</option>{% endfor %}</select></label><div class="dialog-actions"><button type="submit" class="button primary">Mover</button></div></form><button type="button" class="button subtle" data-close-dialog>Cerrar</button></dialog>
+{% endif %}
+{% endblock %}

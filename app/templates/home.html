@@ -1,0 +1,13 @@
+{% extends "shell.html" %}
+{% from "rows.html" import row %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">Tu espacio</p><h1>Inicio</h1><p>Elegí una ubicación o retomá un archivo reciente.</p></div><a class="button primary" href="/drive">Abrir Mi Drive</a></div>
+<section class="home-section"><h2>Ubicaciones</h2><div class="location-grid">
+  <a class="location-card" href="/drive"><span class="location-symbol">▣</span><strong>Mi Drive</strong><small>Archivos y carpetas que guardaste acá</small></a>
+  {% for source in sources %}<a class="location-card" href="/sources/{{ source.id }}/"><span class="location-symbol">⌁</span><strong>{{ source.name }}</strong><small>{{ 'Carpeta vinculada · solo lectura' if source_status(source) else 'No disponible · revisá el montaje' }}</small></a>{% endfor %}
+</div></section>
+<section class="home-section"><div class="section-title"><h2>Recientes</h2><a href="/drive">Ver Mi Drive</a></div>
+  {% if recent %}<div class="file-list">{% for item in recent %}{{ row(describe_entry(item.name, false, item.size_bytes, '/files/' ~ item.id ~ '/download', item.created_at)) }}{% endfor %}</div>
+  {% else %}<p class="empty">Todavía no subiste archivos. Abrí Mi Drive para empezar.</p>{% endif %}
+</section>
+{% endblock %}

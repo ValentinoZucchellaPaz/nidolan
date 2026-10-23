@@ -1,6 +1,6 @@
 # Mi Drive — nube personal para la LAN
 
-Aplicación monousuario para subir, listar y descargar archivos desde una PC de tu red local. No está diseñada para Internet: no habilites port forwarding en el router ni la expongas fuera de tu LAN.
+Aplicación monousuario para organizar archivos y carpetas desde una PC de tu red local. No está diseñada para Internet: no habilites port forwarding en el router ni la expongas fuera de tu LAN. La especificación funcional está en [docs/SPEC.md](docs/SPEC.md).
 
 Para probarla en CachyOS/Arch con tu PC actual, seguí [la guía específica](docs/CACHYOS.md).
 
@@ -8,10 +8,11 @@ Para probarla en CachyOS/Arch con tu PC actual, seguí [la guía específica](do
 
 - Inicio y cierre de sesión con contraseña almacenada como hash `scrypt` en SQLite.
 - Subida atómica de archivos: una carga interrumpida no aparece en el listado.
-- Listado y descarga autenticados.
+- Explorador de carpetas gestionadas: crear, renombrar, mover, subir y descargar.
+- Ubicaciones vinculadas de solo lectura, sin duplicar los archivos del host.
 - Datos persistentes fuera del contenedor: archivos en `/srv/selfdrive/data` y SQLite en `/srv/selfdrive/state`.
 
-No incluye borrado, carpetas, compartidos, cuotas, sincronización ni múltiples usuarios.
+No incluye borrado, vista previa, compartidos, cuotas, sincronización ni múltiples usuarios.
 
 ## Instalación en Debian/Ubuntu
 
@@ -36,6 +37,25 @@ No incluye borrado, carpetas, compartidos, cuotas, sincronización ni múltiples
 
 5. Desde otro dispositivo conectado a la misma red, abrí `http://IP_RESERVADA:8080`, ingresá con el usuario administrador y probá subir y descargar un archivo.
 
+`LIBRARY_PATH` se muestra como «Facultad» de forma predeterminada. Para agregar más ubicaciones seguí [Configurar ubicaciones vinculadas](#configurar-ubicaciones-vinculadas).
+
+## Configurar ubicaciones vinculadas
+
+1. Copiá `sources.example.json` a `sources.json` y establecé `SOURCES_CONFIG=./sources.json` en `.env`.
+2. Agregá una entrada por carpeta. `path` es la ruta **dentro del contenedor**, no la del host:
+
+   ```json
+   [
+     {"id": "facultad", "name": "Facultad", "path": "/library"},
+     {"id": "peliculas", "name": "Películas", "path": "/libraries/peliculas"}
+   ]
+   ```
+
+3. Copiá `compose.sources.example.yaml` a `compose.override.yaml` y reemplazá `/ruta/existente/Peliculas` por la ruta real del host. Por cada fuente adicional, agregá un montaje de solo lectura hacia su `path` interno. Conservá el montaje de Facultad que ya está en `compose.yaml`.
+4. Ejecutá `docker compose up -d --build --force-recreate`. Una fuente ausente se muestra como «No disponible» sin afectar las otras.
+
+Los archivos de configuración local (`sources.json` y `compose.override.yaml`) quedan fuera de Git. No montes una carpeta más amplia de lo que querés exponer a la app.
+
 `restart: unless-stopped` hace que Docker vuelva a levantar el servicio luego de reiniciar la PC. Para administrar el servicio usá `docker compose ps`, `docker compose logs -f` y `docker compose down` (este último no borra los directorios persistentes).
 
 ## Reserva DHCP y aislamiento de Internet
@@ -54,7 +74,7 @@ sudo tar -C /srv/selfdrive -czf selfdrive-backup.tar.gz data state
 docker compose start
 ```
 
-Restaurar una copia requiere detener el servicio y reemplazar **ambos** directorios, porque SQLite y los archivos se corresponden entre sí.
+Restaurar una copia requiere detener el servicio y reemplazar **ambos** directorios, porque SQLite y los archivos se corresponden entre sí. Guardá también `sources.json` y `compose.override.yaml` si los usás.
 
 ## Cambiar la contraseña
 

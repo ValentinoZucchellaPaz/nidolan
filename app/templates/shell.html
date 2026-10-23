@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">⌂</span><span>Mi Drive</span></a>
+    <nav>
+      <a class="nav-link {% if active == 'home' %}selected{% endif %}" href="/"><span aria-hidden="true">⌂</span> Inicio</a>
+      <a class="nav-link {% if active == 'drive' %}selected{% endif %}" href="/drive"><span aria-hidden="true">▣</span> Mi Drive</a>
+      <p class="nav-caption">Ubicaciones vinculadas</p>
+      {% for source in sources %}
+      <a class="nav-link {% if active == source.id %}selected{% endif %}" href="/sources/{{ source.id }}/">
+        <span class="source-dot {% if not source_status(source) %}offline{% endif %}" aria-hidden="true"></span>{{ source.name }}
+        {% if not source_status(source) %}<span class="sr-only">(no disponible)</span>{% endif %}
+      </a>
+      {% endfor %}
+    </nav>
+    <div class="sidebar-bottom"><span class="status-dot" aria-hidden="true"></span>Servidor local<br><small>Archivos en tu propia PC</small></div>
+  </aside>
+  <div class="workspace">
+    <header class="topbar">
+      <button class="icon-button menu-toggle" type="button" aria-label="Abrir navegación" aria-controls="sidebar" aria-expanded="false">☰</button>
+      <a href="/" class="mobile-brand">Mi Drive</a>
+      <div class="topbar-spacer"></div>
+      <span class="user-label">{{ request.session.username }}</span>
+      <form action="/logout" method="post"><button class="button subtle" type="submit">Salir</button></form>
+    </header>
+    <main class="content" id="main-content">{% block content %}{% endblock %}</main>
+  </div>
+</div>
+<div class="scrim" hidden></div>
+{% endblock %}

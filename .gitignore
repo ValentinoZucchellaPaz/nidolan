@@ -2,6 +2,8 @@
 .selfdrive/
 .selfdrive-data/
 .selfdrive-state/
+sources.json
+compose.override.yaml
 __pycache__/
 .pytest_cache/
 *.pyc

@@ -40,6 +40,8 @@ docker compose up -d --build
 docker compose logs -f
 ```
 
+Para vincular otras carpetas de esta PC sin copiarlas, seguí [la configuración de ubicaciones](../README.md#configurar-ubicaciones-vinculadas). Mi Drive sigue guardando sus propios archivos en `.selfdrive/data` y metadatos en `.selfdrive/state`.
+
 Abrí [http://127.0.0.1:8080](http://127.0.0.1:8080) en esa misma PC. Podés detenerla con `docker compose down`; los datos de la prueba quedan en `.selfdrive/`, fuera de Git.
 
 ## 3. Probarla desde otro equipo de la LAN

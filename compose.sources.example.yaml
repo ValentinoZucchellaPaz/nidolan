@@ -1,0 +1,4 @@
+services:
+  selfdrive:
+    volumes:
+      - /ruta/existente/Peliculas:/libraries/peliculas:ro

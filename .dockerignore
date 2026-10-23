@@ -1,0 +1,11 @@
+.git
+.env
+.env.*
+.selfdrive
+.selfdrive-data
+.selfdrive-state
+__pycache__
+.pytest_cache
+tests
+docs
+*.sqlite3
