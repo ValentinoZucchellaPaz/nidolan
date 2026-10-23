@@ -4,6 +4,11 @@ services:
     container_name: selfdrive
     restart: unless-stopped
     env_file: ${ENV_FILE:-.env}
+    environment:
+      # DATA_DIR/STATE_DIR from .env name host paths for bind mounts below.
+      # The application must instead use the container mount targets.
+      DATA_DIR: /data
+      STATE_DIR: /var/lib/selfdrive
     user: "${PUID:-1000}:${PGID:-1000}"
     ports:
       - "${BIND_ADDRESS:-0.0.0.0}:${HOST_PORT:-8080}:8080"
