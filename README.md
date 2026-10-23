@@ -1,48 +1,57 @@
-# Mi Drive — nube personal para la LAN
+# NidoLAN
 
-Aplicación monousuario para organizar archivos y carpetas desde una PC de tu red local. No está diseñada para Internet: no habilites port forwarding en el router ni la expongas fuera de tu LAN. La especificación funcional está en [docs/SPEC.md](docs/SPEC.md).
+**Tus archivos, en tu casa.** NidoLAN es una pequeña nube personal para usar desde cualquier navegador de tu red local. Corre en una PC con Docker: podés guardar archivos en Mi Drive y navegar carpetas que ya existen en el equipo sin copiarlas.
 
-Para probarla en CachyOS/Arch con tu PC actual, seguí [la guía específica](docs/CACHYOS.md).
+Es un proyecto monousuario y en desarrollo. Sirve para aprender y experimentar con redes, almacenamiento y una aplicación web self hosted; no está preparado para exponerse directamente a Internet.
 
-## Qué incluye
+## Qué podés hacer
 
-- Inicio y cierre de sesión con contraseña almacenada como hash `scrypt` en SQLite.
-- Subida atómica de archivos: una carga interrumpida no aparece en el listado.
-- Explorador de carpetas gestionadas: crear, renombrar, mover, subir y descargar.
-- Ubicaciones vinculadas de solo lectura, sin duplicar los archivos del host.
-- Datos persistentes fuera del contenedor: archivos en `/srv/selfdrive/data` y SQLite en `/srv/selfdrive/state`.
+- Entrar con contraseña desde una PC o un celular de la misma LAN.
+- Crear carpetas, subir, renombrar, mover y descargar archivos en **Mi Drive**.
+- Vincular otras carpetas del host en **solo lectura**, por ejemplo apuntes o películas. Sus archivos permanecen en la ruta original.
+- Buscar dentro de la carpeta abierta y ordenar por nombre o fecha.
 
-No incluye borrado, vista previa, compartidos, cuotas, sincronización ni múltiples usuarios.
+**Todavía no incluye** vista previa, borrado, sincronización automática, compartidos ni varios usuarios. La [especificación y hoja de ruta](docs/SPEC.md) detalla lo implementado y lo próximo.
 
-## Instalación en Debian/Ubuntu
+## Probarlo en CachyOS / Arch
 
-1. Instalá Docker Engine y el plugin Docker Compose siguiendo la documentación oficial de Docker. Confirmá la instalación con `docker compose version`.
-2. Copiá este proyecto a la PC servidora y ubicá los datos persistentes. Ajustá el UID/GID si tu usuario no es `1000`:
+Necesitás Docker y Docker Compose. Con Docker funcionando, desde la raíz del repositorio:
 
-   ```bash
-   sudo install -d -o "$USER" -g "$USER" /srv/selfdrive/data /srv/selfdrive/state
-   cp .env.example .env
-   id -u
-   id -g
-   openssl rand -hex 32
-   ```
+```bash
+cp .env.cachyos.example .env
+install -d -m 700 .selfdrive/data .selfdrive/state
+openssl rand -hex 32
+```
 
-3. Editá `.env`: establecé una contraseña larga, pegá la clave generada en `SESSION_SECRET`, completá `PUID` y `PGID`, y reemplazá `BIND_ADDRESS` por la IP que el router reservó para la PC, por ejemplo `192.168.1.50`.
-4. Desde el directorio del proyecto, iniciá el servidor:
+Editá `.env`: elegí `ADMIN_USERNAME` y una contraseña larga en `ADMIN_PASSWORD`, pegá la clave generada en `SESSION_SECRET` y cambiá `LIBRARY_PATH` por una carpeta **existente** de tu PC. Esa carpeta se mostrará como «Facultad» inicialmente; podés darle otro nombre o sumar más ubicaciones después.
 
-   ```bash
-   docker compose up -d --build
-   docker compose logs -f
-   ```
+```bash
+docker compose up -d --build
+docker compose ps
+```
 
-5. Desde otro dispositivo conectado a la misma red, abrí `http://IP_RESERVADA:8080`, ingresá con el usuario administrador y probá subir y descargar un archivo.
+Abrí [http://127.0.0.1:8080](http://127.0.0.1:8080). Para entrar desde el celular, conectalo a la misma Wi-Fi, cambiá `BIND_ADDRESS` en `.env` por la IP local de la PC y ejecutá `docker compose up -d`. Consultá la IP con `hostname -I`; una reserva DHCP en el router evita que cambie. La [guía de CachyOS](docs/CACHYOS.md) incluye la instalación de Docker y más detalles.
 
-`LIBRARY_PATH` se muestra como «Facultad» de forma predeterminada. Para agregar más ubicaciones seguí [Configurar ubicaciones vinculadas](#configurar-ubicaciones-vinculadas).
+## Instalarlo en Debian / Ubuntu
 
-## Configurar ubicaciones vinculadas
+Instalá Docker Engine y el plugin Compose. Creá los directorios persistentes y copiá la configuración:
 
-1. Copiá `sources.example.json` a `sources.json` y establecé `SOURCES_CONFIG=./sources.json` en `.env`.
-2. Agregá una entrada por carpeta. `path` es la ruta **dentro del contenedor**, no la del host:
+```bash
+sudo install -d -o "$USER" -g "$USER" /srv/selfdrive/data /srv/selfdrive/state /srv/selfdrive/library
+cp .env.example .env
+id -u
+id -g
+openssl rand -hex 32
+```
+
+En `.env`, completá usuario, contraseña y clave de sesión, ajustá `PUID`/`PGID` según los valores de `id`, y poné en `BIND_ADDRESS` la IP local reservada para el servidor. Luego iniciá con `docker compose up -d --build` y abrí `http://IP_DEL_SERVIDOR:8080` desde la LAN.
+
+## Vincular más carpetas sin duplicarlas
+
+Cada ubicación necesita un nombre y dos rutas: una carpeta real del host y su punto de montaje dentro del contenedor.
+
+1. Copiá `sources.example.json` a `sources.json` y cambiá `SOURCES_CONFIG=./sources.json` en `.env`.
+2. Agregá una entrada con identificador, nombre y ruta interna:
 
    ```json
    [
@@ -51,47 +60,30 @@ No incluye borrado, vista previa, compartidos, cuotas, sincronización ni múlti
    ]
    ```
 
-3. Copiá `compose.sources.example.yaml` a `compose.override.yaml` y reemplazá `/ruta/existente/Peliculas` por la ruta real del host. Por cada fuente adicional, agregá un montaje de solo lectura hacia su `path` interno. Conservá el montaje de Facultad que ya está en `compose.yaml`.
-4. Ejecutá `docker compose up -d --build --force-recreate`. Una fuente ausente se muestra como «No disponible» sin afectar las otras.
+3. Copiá `compose.sources.example.yaml` a `compose.override.yaml`. Cambiá la ruta de ejemplo por tu carpeta real y agregá un montaje `:ro` por cada ubicación nueva.
+4. Aplicá los cambios con `docker compose up -d --force-recreate`.
 
-Los archivos de configuración local (`sources.json` y `compose.override.yaml`) quedan fuera de Git. No montes una carpeta más amplia de lo que querés exponer a la app.
+`sources.json` y `compose.override.yaml` son locales y están ignorados por Git. Si se desconecta una carpeta, NidoLAN la marca como no disponible y el resto sigue funcionando.
 
-`restart: unless-stopped` hace que Docker vuelva a levantar el servicio luego de reiniciar la PC. Para administrar el servicio usá `docker compose ps`, `docker compose logs -f` y `docker compose down` (este último no borra los directorios persistentes).
+## Datos y seguridad
 
-## Reserva DHCP y aislamiento de Internet
+Mi Drive guarda los archivos con nombres internos aleatorios en `DATA_DIR` y sus metadatos y el hash de la contraseña en SQLite, dentro de `STATE_DIR`. Ambos directorios están fuera del contenedor. Una carpeta vinculada se monta en solo lectura y no se copia a `DATA_DIR`.
 
-En la interfaz del router, buscá **DHCP reservation**, **Address reservation** o una opción similar. Asociá la MAC de la PC a una IP fija y usá esa IP en `BIND_ADDRESS`. La pantalla y nombres concretos cambian según el modelo del router.
+`.env`, la base de datos, los archivos subidos y las rutas personales de `sources.json` y `compose.override.yaml` **no se suben a Git**. No abras el puerto 8080 a Internet mediante port forwarding, UPnP o DMZ: el login de esta versión usa HTTP para la LAN. Para acceso remoto hacen falta HTTPS, copias de seguridad y una arquitectura de acceso segura.
 
-No configures redirección de puertos (port forwarding), UPnP ni una DMZ hacia esta PC. Eso mantiene la aplicación fuera de Internet. Como usa HTTP, una futura exposición remota exige HTTPS con proxy inverso, copias de seguridad y control de acceso adicional.
+Para respaldar Mi Drive, detené el servicio (`docker compose stop`), copiá **juntos** `DATA_DIR` y `STATE_DIR`, y volvé a iniciarlo (`docker compose start`). Para cambiar la contraseña, editá `.env`, ejecutá `docker compose up -d --force-recreate` y luego `docker compose exec selfdrive python -m app.admin reset-password`.
 
-## Copias de seguridad
+## Desarrollo
 
-Detené el servicio antes de una copia consistente y guardá ambos directorios:
-
-```bash
-docker compose stop
-sudo tar -C /srv/selfdrive -czf selfdrive-backup.tar.gz data state
-docker compose start
-```
-
-Restaurar una copia requiere detener el servicio y reemplazar **ambos** directorios, porque SQLite y los archivos se corresponden entre sí. Guardá también `sources.json` y `compose.override.yaml` si los usás.
-
-## Cambiar la contraseña
-
-Después de editar `ADMIN_PASSWORD` (o `ADMIN_USERNAME`) en `.env`, reconstruí el servicio y ejecutá una vez el comando de restablecimiento:
-
-```bash
-docker compose up -d --build
-docker compose exec selfdrive python -m app.admin reset-password
-```
-
-Esto conserva todos los archivos y sus metadatos; reemplaza la única cuenta administradora con las credenciales actuales de `.env`.
-
-## Desarrollo y pruebas
-
-En un entorno Python con las dependencias de desarrollo instaladas:
+Backend en Python/FastAPI, páginas HTML con CSS y JavaScript pequeños, SQLite y un contenedor Docker. `app/main.py` ensambla routers; la autenticación, el explorador, la base y las ubicaciones vinculadas están en módulos separados.
 
 ```bash
 python -m pip install -r requirements-dev.txt
 pytest
 ```
+
+Las ramas se usan así: `main` es la versión recomendada, `cachyos` es la rama de trabajo para nuevas funciones y `debian` conserva la versión anterior orientada a Debian/Ubuntu.
+
+## Licencia
+
+MIT. Ver [LICENSE](LICENSE).

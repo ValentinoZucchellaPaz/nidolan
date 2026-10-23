@@ -2,7 +2,7 @@
 {% block body %}
 <div class="app-shell">
   <aside class="sidebar" id="sidebar" aria-label="Navegación principal">
-    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">⌂</span><span>Mi Drive</span></a>
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">⌂</span><span>NidoLAN</span></a>
     <nav>
       <a class="nav-link {% if active == 'home' %}selected{% endif %}" href="/"><span aria-hidden="true">⌂</span> Inicio</a>
       <a class="nav-link {% if active == 'drive' %}selected{% endif %}" href="/drive"><span aria-hidden="true">▣</span> Mi Drive</a>
@@ -19,7 +19,7 @@
   <div class="workspace">
     <header class="topbar">
       <button class="icon-button menu-toggle" type="button" aria-label="Abrir navegación" aria-controls="sidebar" aria-expanded="false">☰</button>
-      <a href="/" class="mobile-brand">Mi Drive</a>
+      <a href="/" class="mobile-brand">NidoLAN</a>
       <div class="topbar-spacer"></div>
       <span class="user-label">{{ request.session.username }}</span>
       <form action="/logout" method="post"><button class="button subtle" type="submit">Salir</button></form>

@@ -18,7 +18,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         raise RuntimeError("ADMIN_USERNAME no puede estar vacío.")
     configured_sources(config)
     setup_storage(config)
-    application = FastAPI(title="Mi Drive", docs_url=None, redoc_url=None)
+    application = FastAPI(title="NidoLAN", docs_url=None, redoc_url=None)
     application.state.settings = config
     application.add_middleware(
         SessionMiddleware, secret_key=config.session_secret, same_site="lax", https_only=False

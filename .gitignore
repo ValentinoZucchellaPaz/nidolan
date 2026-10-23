@@ -4,6 +4,7 @@
 .selfdrive-state/
 sources.json
 compose.override.yaml
+PROJECT_CONTEXT.md
 __pycache__/
 .pytest_cache/
 *.pyc
