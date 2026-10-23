@@ -1,5 +1,7 @@
 .env
 .selfdrive/
+.selfdrive-data/
+.selfdrive-state/
 __pycache__/
 .pytest_cache/
 *.pyc
