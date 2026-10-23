@@ -2,6 +2,8 @@
 
 Aplicación monousuario para subir, listar y descargar archivos desde una PC de tu red local. No está diseñada para Internet: no habilites port forwarding en el router ni la expongas fuera de tu LAN.
 
+Para probarla en CachyOS/Arch con tu PC actual, seguí [la guía específica](docs/CACHYOS.md).
+
 ## Qué incluye
 
 - Inicio y cierre de sesión con contraseña almacenada como hash `scrypt` en SQLite.
