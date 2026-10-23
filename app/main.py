@@ -168,7 +168,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         https_only=False,  # HTTP is intentional for the LAN-only MVP; enable HTTPS before remote access.
     )
 
-    @application.get("/login", response_class=HTMLResponse)
+    @application.get("/login", response_class=HTMLResponse, response_model=None)
     def login_form(request: Request, error: str | None = None) -> HTMLResponse | RedirectResponse:
         if is_authenticated(request):
             return RedirectResponse("/", status_code=303)
@@ -201,7 +201,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         request.session.clear()
         return RedirectResponse("/login", status_code=303)
 
-    @application.get("/", response_class=HTMLResponse)
+    @application.get("/", response_class=HTMLResponse, response_model=None)
     def index(request: Request) -> HTMLResponse | RedirectResponse:
         redirect = require_login(request)
         if redirect:
@@ -266,7 +266,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             upload.file.close()
         return RedirectResponse("/", status_code=303)
 
-    @application.get("/files/{file_id}/download")
+    @application.get("/files/{file_id}/download", response_model=None)
     def download_file(file_id: str, request: Request) -> FileResponse | RedirectResponse:
         redirect = require_login(request)
         if redirect:
